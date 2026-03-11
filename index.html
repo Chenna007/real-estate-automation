@@ -704,6 +704,9 @@ const synth=window.speechSynthesis;
 // ── INCOMING CALL POPUP ──
 function showCallPopup(lead){
   if(callModalActive) return;
+  // Prevent popup if contact form is visible
+  const cta = document.getElementById('cta');
+  if (cta && cta.getBoundingClientRect().top < window.innerHeight && cta.getBoundingClientRect().bottom > 0) return;
   const el=document.getElementById('call-popup');
   document.getElementById('popup-caller').textContent=lead.name;
   document.getElementById('popup-prop').textContent=`${lead.prop} · ${lead.loc}`;
