@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Lead Closing System — Dubai Luxury Real Estate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#0B0B0B;--bg2:#0D0D10;--card:#151515;
+  --gold:#C9A96A;--gold-l:#E8C98A;--gold-d:#7A6030;
+  --border:rgba(201,169,106,.15);--text:#E8E4DC;
+  --muted:rgba(232,228,220,.45);--green:#22c55e;--wa:#25D366;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;line-height:1.6}
+button{font-family:'DM Sans',sans-serif;cursor:pointer}
+input{font-family:'DM Sans',sans-serif}
+h1,h2,h3,h4{font-family:'Playfair Display',serif;line-height:1.15}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:2px}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.35}
+.gold-text{background:linear-gradient(135deg,#C9A96A,#E8C98A 50%,#C9A96A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.container{max-width:1160px;margin:0 auto;padding:0 20px}
+.section-tag{font-family:'JetBrains Mono',monospace;font-size:.63rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.section-tag::before{content:'';width:22px;height:1px;background:var(--gold)}
+section{padding:70px 0}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.glass{background:rgba(21,21,21,.75);border:1px solid var(--border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:14px;transition:border-color .3s,box-shadow .3s}
+.glass:hover{border-color:rgba(201,169,106,.32);box-shadow:0 20px 50px rgba(201,169,106,.05)}
+.btn-gold{background:linear-gradient(135deg,#C9A96A,#E8C98A,#C9A96A);background-size:200%;color:#0B0B0B;font-weight:600;font-size:.88rem;padding:12px 24px;border-radius:9px;border:none;transition:all .3s;letter-spacing:.02em;display:inline-flex;align-items:center;gap:8px;min-height:46px;white-space:nowrap}
+.btn-gold:hover{background-position:100%;transform:translateY(-2px);box-shadow:0 10px 28px rgba(201,169,106,.28)}
+.btn-outline{background:transparent;color:var(--gold-l);border:1px solid rgba(201,169,106,.32);font-weight:500;font-size:.88rem;padding:12px 24px;border-radius:9px;transition:all .3s;display:inline-flex;align-items:center;gap:8px;min-height:46px;white-space:nowrap}
+.btn-outline:hover{background:rgba(201,169,106,.07);border-color:var(--gold)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .65s,transform .65s}
+.reveal.in{opacity:1;transform:translateY(0)}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+
+/* NAV */
+#nav{position:fixed;top:0;left:0;right:0;z-index:800;padding:13px 20px;background:rgba(11,11,11,.9);backdrop-filter:blur(24px);border-bottom:1px solid rgba(201,169,106,.1);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.nav-logo{font-family:'Playfair Display',serif;font-size:.98rem;font-weight:600;white-space:nowrap}
+.nav-links{display:flex;align-items:center;gap:20px}
+.nav-links a{color:var(--muted);font-size:.83rem;text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--gold-l)}
+.nav-btns{display:flex;align-items:center;gap:10px}
+#hamburger{display:none;background:none;border:none;padding:4px}
+#mobile-nav{display:none;position:fixed;inset:0;background:rgba(11,11,11,.98);z-index:850;flex-direction:column;align-items:center;justify-content:center;gap:26px}
+#mobile-nav.open{display:flex}
+#mobile-nav a{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold-l);text-decoration:none}
+
+/* HERO */
+#hero{min-height:100vh;position:relative;display:flex;align-items:center;overflow:hidden;padding-top:70px}
+.hero-bg{position:absolute;inset:0;z-index:0;background:linear-gradient(to bottom,rgba(11,11,11,.52) 0%,rgba(11,11,11,.78) 60%,rgba(11,11,11,.99) 100%),url('https://images.unsplash.com/photo-1546412414-e1885259563a?w=1800&q=80') center/cover no-repeat}
+.hero-glow{position:absolute;width:700px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(201,169,106,.1),transparent 70%);top:30%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.hero-content{position:relative;z-index:2;text-align:center;padding:60px 20px 80px;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(201,169,106,.08);border:1px solid rgba(201,169,106,.2);border-radius:50px;padding:6px 18px;font-family:'JetBrains Mono',monospace;font-size:.63rem;letter-spacing:.15em;color:var(--gold);margin-bottom:26px}
+.hero-h1{font-size:clamp(2.1rem,5.5vw,4.8rem);font-weight:900;margin-bottom:20px;letter-spacing:-.02em}
+.hero-sub{font-size:clamp(.92rem,2vw,1.12rem);color:var(--muted);max-width:560px;margin:0 auto 38px;line-height:1.75}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:500px;margin:58px auto 0;padding-top:34px;border-top:1px solid rgba(201,169,106,.12)}
+.stat-val{font-family:'Playfair Display',serif;font-size:clamp(1.9rem,4vw,2.7rem);font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.4}
+
+/* MAP */
+#map-section{background:var(--bg2)}
+#map-wrap{border-radius:14px;border:1px solid var(--border);overflow:hidden;position:relative}
+#map{height:420px;width:100%;filter:saturate(.75) brightness(.82)}
+.map-badge{position:absolute;top:14px;left:14px;z-index:400;background:rgba(11,11,11,.9);border:1px solid rgba(201,169,106,.25);border-radius:10px;padding:9px 13px;backdrop-filter:blur(16px);display:flex;align-items:center;gap:9px}
+.map-tag{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.1em;color:var(--gold)}
+.map-num{font-size:1.1rem;font-weight:600;color:var(--text)}
+.map-sources{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.src-pill{background:rgba(21,21,21,.9);border:1px solid rgba(201,169,106,.16);border-radius:7px;padding:6px 12px;font-size:.73rem;display:flex;align-items:center;gap:6px}
+.src-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.leaflet-popup-content-wrapper{background:rgba(13,13,18,.97)!important;border:1px solid rgba(201,169,106,.26)!important;border-radius:12px!important;color:var(--text)!important;backdrop-filter:blur(20px);box-shadow:0 20px 50px rgba(0,0,0,.6)!important}
+.leaflet-popup-tip{background:rgba(201,169,106,.26)!important}
+.leaflet-popup-close-button{color:rgba(201,169,106,.6)!important;top:8px!important;right:10px!important}
+@keyframes markerPulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+
+/* INCOMING CALL */
+#call-popup{position:fixed;bottom:20px;right:20px;z-index:2000;width:min(295px,calc(100vw - 40px));display:none;background:rgba(13,13,18,.98);border:1px solid rgba(201,169,106,.35);border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.75);animation:slideUp .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes slideUp{from{transform:translateY(100px);opacity:0}to{transform:translateY(0);opacity:1}}
+.call-ring{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#C9A96A,#E8C98A);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto;animation:ring 1s infinite}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(201,169,106,.5)}50%{box-shadow:0 0 0 12px rgba(201,169,106,0)}}
+.call-btns{display:flex;border-top:1px solid rgba(255,255,255,.06)}
+.cbtn{flex:1;border:none;padding:14px;font-size:.83rem;font-weight:500;transition:background .2s;font-family:'DM Sans',sans-serif}
+.cbtn-d{background:rgba(239,68,68,.12);color:#EF4444;border-right:1px solid rgba(255,255,255,.06)}.cbtn-d:hover{background:rgba(239,68,68,.22)}
+.cbtn-a{background:rgba(34,197,94,.12);color:var(--green)}.cbtn-a:hover{background:rgba(34,197,94,.22)}
+
+/* AI CALL SECTION */
+#ai-call-section{background:var(--bg)}
+.call-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+.phone-frame{background:#0C0C14;border:2px solid rgba(201,169,106,.22);border-radius:36px;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.6);max-width:300px;margin:0 auto}
+.p-notch-bar{background:#0C0C14;padding:10px 0 0;text-align:center}
+.p-notch{width:86px;height:24px;background:#0C0C14;border-radius:0 0 16px 16px;margin:0 auto}
+.p-call-hdr{background:linear-gradient(180deg,#181824,#0C0C14);padding:17px 17px 20px;text-align:center;border-bottom:1px solid rgba(201,169,106,.1)}
+.p-avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#C9A96A,#E8C98A);display:flex;align-items:center;justify-content:center;font-size:1.35rem;margin:0 auto 10px;box-shadow:0 0 26px rgba(201,169,106,.3);position:relative}
+.p-ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--gold);animation:pRing 2s infinite}
+.p-ring:nth-child(2){animation-delay:.7s}
+@keyframes pRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.65);opacity:0}}
+.p-bubbles{min-height:230px;max-height:240px;overflow-y:auto;padding:4px 0}
+.p-bubble{margin:6px 9px;padding:8px 12px;border-radius:15px;font-size:.78rem;line-height:1.5;max-width:82%;opacity:0;transform:translateY(5px);transition:opacity .4s,transform .4s}
+.p-bubble.show{opacity:1;transform:translateY(0)}
+.b-ai{background:rgba(201,169,106,.1);border:1px solid rgba(201,169,106,.2);border-bottom-left-radius:3px;margin-right:auto}
+.b-user{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-bottom-right-radius:3px;margin-left:auto}
+.typing-dots{display:none;align-items:center;gap:4px;padding:8px 12px;background:rgba(201,169,106,.07);border:1px solid rgba(201,169,106,.14);border-radius:15px;border-bottom-left-radius:3px;margin:6px 9px;width:fit-content}
+.typing-dots.show{display:flex}
+.typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:dotB 1.2s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotB{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+.p-controls{padding:13px 16px;background:#0C0C14;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center}
+.ctrl-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.06);border:none;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+#play-btn{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#C9A96A,#E8C98A);border:none;font-size:1.3rem;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(201,169,106,.33);transition:all .2s}
+#play-btn:hover{transform:scale(1.07)}
+.waveform{display:flex;align-items:center;justify-content:center;gap:2px;height:26px;margin-top:9px}
+.wv{width:3px;border-radius:2px;background:var(--gold);animation:wvA .8s infinite ease-in-out;height:5px}
+.wv.on{animation:wvA .8s infinite ease-in-out}
+@keyframes wvA{0%,100%{height:4px}50%{height:20px}}
+.call-transcript{display:flex;flex-direction:column;gap:9px}
+.t-item{padding:12px 14px;border-radius:11px;background:rgba(21,21,21,.8);border:1px solid rgba(255,255,255,.06)}
+.t-item.ai-t{background:rgba(201,169,106,.05);border-color:rgba(201,169,106,.13)}
+.t-role{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.1em;margin-bottom:4px;opacity:.45}
+.t-text{font-size:.83rem;color:rgba(232,228,220,.72);line-height:1.5}
+
+/* CRM */
+#crm-overlay{position:fixed;inset:0;z-index:2499;background:rgba(0,0,0,.5);display:none;backdrop-filter:blur(4px)}
+#crm-overlay.open{display:block}
+#crm-panel{position:fixed;right:-440px;top:0;bottom:0;z-index:2500;width:min(390px,100vw);background:rgba(11,11,14,.98);border-left:1px solid rgba(201,169,106,.18);backdrop-filter:blur(20px);transition:right .5s cubic-bezier(.34,1.2,.64,1);overflow-y:auto;padding:22px}
+#crm-panel.open{right:0}
+.crm-f{margin-bottom:13px}
+.crm-lbl{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.14em;color:var(--gold);margin-bottom:4px}
+.crm-v{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:9px 11px;font-size:.83rem;color:rgba(255,255,255,.75);min-height:36px;transition:all .4s}
+.crm-v.filled{border-color:rgba(201,169,106,.3);background:rgba(201,169,106,.05);color:var(--gold-l)}
+
+/* PIPELINE */
+#pipeline-section{background:var(--bg2)}
+.pipeline-board{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;overflow-x:auto;padding-bottom:4px}
+.pipe-col{min-width:150px}
+.pipe-col-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.pipe-t{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.1em}
+.pipe-c{width:20px;height:20px;border-radius:50%;font-size:.6rem;display:flex;align-items:center;justify-content:center}
+.pipe-card{background:rgba(21,21,21,.85);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:11px;font-size:.78rem;margin-bottom:7px;transition:all .4s}
+.pipe-card.active{border-color:rgba(201,169,106,.36);background:rgba(201,169,106,.06);box-shadow:0 0 16px rgba(201,169,106,.1)}
+.pipe-name{font-weight:500;color:rgba(232,228,220,.82);margin-bottom:2px}
+.pipe-sub{font-size:.68rem;color:rgba(232,228,220,.32)}
+.pipe-prog{width:100%;height:2px;background:rgba(255,255,255,.05);border-radius:1px;margin-top:7px}
+.pipe-bar{height:100%;border-radius:1px;transition:width 1s}
+
+/* ANALYTICS */
+#analytics{background:var(--bg)}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px}
+.metric-card{padding:20px;border-radius:13px}
+.metric-tag{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:var(--gold);margin-bottom:9px}
+.metric-val{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:700;line-height:1}
+.metric-chg{font-size:.7rem;color:var(--green);margin-top:5px}
+.charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* WHATSAPP */
+#wa-section{background:var(--bg2)}
+.wa-layout{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center}
+.wa-frame{width:min(310px,100%);border-radius:20px;overflow:hidden;background:#0D1117;border:1px solid rgba(37,211,102,.18);box-shadow:0 40px 80px rgba(0,0,0,.5);margin:0 auto}
+.wa-hdr{background:#1A2E1A;padding:12px 15px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(37,211,102,.1)}
+.wa-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#128C7E,#25D366);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.wa-body{padding:11px;min-height:220px;background:#0D1520}
+.wa-b{padding:8px 12px;border-radius:13px;font-size:.78rem;line-height:1.5;max-width:78%;margin:4px 0;opacity:0;transform:translateY(5px);transition:opacity .4s,transform .4s}
+.wa-b.show{opacity:1;transform:translateY(0)}
+.wa-r{background:#1A2E1A;border:1px solid rgba(37,211,102,.09);border-bottom-left-radius:3px}
+.wa-s{background:#1B3A28;border:1px solid rgba(37,211,102,.16);border-bottom-right-radius:3px;margin-left:auto}
+.wa-time{font-size:.6rem;color:rgba(255,255,255,.26);margin-top:2px;text-align:right}
+.wa-input{background:#0D1117;padding:8px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid rgba(37,211,102,.07)}
+.wa-input input{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:17px;padding:7px 12px;color:var(--text);font-size:.76rem;outline:none}
+
+/* PRICING */
+#pricing{background:var(--bg)}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:920px;margin:0 auto}
+.pr-card{background:var(--card);border:1px solid rgba(201,169,106,.14);border-radius:17px;padding:30px 24px;transition:all .3s}
+.pr-card:hover{border-color:rgba(201,169,106,.36);transform:translateY(-4px);box-shadow:0 26px 60px rgba(201,169,106,.07)}
+.pr-card.feat{border-color:var(--gold);background:linear-gradient(160deg,rgba(201,169,106,.08),var(--card));position:relative}
+.feat-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#C9A96A,#E8C98A);color:#0B0B0B;font-size:.66rem;font-weight:700;padding:4px 15px;border-radius:20px;letter-spacing:.07em;white-space:nowrap}
+.pr-tier{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.15em;margin-bottom:7px}
+.pr-price{font-family:'Playfair Display',serif;font-size:2.3rem;font-weight:700;line-height:1.1}
+.pr-price span{font-size:.88rem;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--muted)}
+.pr-div{height:1px;background:rgba(255,255,255,.06);margin:16px 0}
+.pr-ul{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
+.pr-ul li{display:flex;gap:9px;font-size:.82rem;color:rgba(232,228,220,.62);align-items:flex-start}
+.pr-ul li::before{content:'✓';color:var(--gold);font-size:.86rem;flex-shrink:0}
+
+/* CTA */
+#cta{background:var(--bg2);position:relative;overflow:hidden}
+#cta::before{content:'';position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(201,169,106,.09),transparent);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta-form{max-width:390px;margin:0 auto;background:rgba(21,21,21,.75);border:1px solid var(--border);border-radius:15px;padding:26px;backdrop-filter:blur(20px)}
+.fi{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:12px 13px;color:var(--text);font-size:.86rem;outline:none;transition:border-color .2s;margin-bottom:11px}
+.fi:focus{border-color:rgba(201,169,106,.36)}
+.trust-row{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:32px}
+.ti{display:flex;align-items:center;gap:6px;font-size:.76rem;color:rgba(255,255,255,.32)}
+footer{background:#080808;padding:26px 20px;border-top:1px solid rgba(201,169,106,.08);text-align:center}
+
+/* AI MODAL */
+#ai-modal{position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);backdrop-filter:blur(10px);padding:16px}
+.modal-box{background:rgba(12,12,16,.99);border:1px solid rgba(201,169,106,.24);border-radius:22px;width:min(490px,100%);overflow:hidden;box-shadow:0 60px 120px rgba(0,0,0,.8)}
+.modal-hdr{background:linear-gradient(180deg,#1C1C24,#111116);padding:20px;text-align:center;border-bottom:1px solid rgba(201,169,106,.1)}
+.modal-av{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#C9A96A,#E8C98A);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0 auto 9px;box-shadow:0 0 24px rgba(201,169,106,.3)}
+.modal-transcript{padding:13px;max-height:230px;overflow-y:auto;background:#0C0C10}
+.modal-ctrl{padding:13px 16px;background:#0C0C10;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center}
+.m-bubble{margin:6px 9px;padding:8px 12px;border-radius:15px;font-size:.78rem;line-height:1.5;max-width:82%;opacity:0;transform:translateY(5px);transition:opacity .4s,transform .4s}
+.m-bubble.show{opacity:1;transform:translateY(0)}
+
+/* FAQ */
+#faq{background:var(--bg2)}
+.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:980px;margin:0 auto}
+.faq-item{background:rgba(21,21,21,.75);border:1px solid rgba(201,169,106,.13);border-radius:13px;overflow:hidden;transition:border-color .3s}
+.faq-item.open{border-color:rgba(201,169,106,.35)}
+.faq-q{width:100%;background:none;border:none;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;text-align:left;cursor:pointer;transition:background .25s}
+.faq-q:hover{background:rgba(201,169,106,.04)}
+.faq-q-text{font-size:.9rem;font-weight:500;color:var(--text);line-height:1.45;flex:1}
+.faq-icon{width:28px;height:28px;border-radius:50%;border:1px solid rgba(201,169,106,.28);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .3s;color:var(--gold);font-size:.9rem}
+.faq-item.open .faq-icon{background:rgba(201,169,106,.12);border-color:var(--gold);transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .3s}
+.faq-a-inner{padding:0 22px 18px;font-size:.85rem;color:var(--muted);line-height:1.75}
+.faq-item.open .faq-a{max-height:300px}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .pipeline-board{grid-template-columns:repeat(3,1fr)}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .charts-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .faq-grid{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  section{padding:50px 0}
+  .container{padding:0 15px}
+  .nav-links,.nav-btns{display:none}
+  #hamburger{display:block}
+  .call-layout{grid-template-columns:1fr;gap:22px}
+  .wa-layout{grid-template-columns:1fr;gap:22px}
+  .pricing-grid{grid-template-columns:1fr;max-width:360px}
+  .pipeline-board{grid-template-columns:repeat(5,145px)}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .charts-grid{grid-template-columns:1fr}
+  #map{height:290px}
+  #crm-panel{width:100%;right:-100%}
+  .hero-h1{font-size:1.95rem}
+  .hero-stats{gap:10px}
+  .stat-val{font-size:1.7rem}
+  .btn-gold,.btn-outline{padding:11px 18px;font-size:.83rem;min-height:44px}
+}
+@media(max-width:400px){
+  .hero-h1{font-size:1.7rem}
+  .hero-badge{font-size:.55rem;padding:5px 13px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo"><span class="gold-text">Dubai Luxury</span><span style="color:rgba(255,255,255,.28);font-size:.76rem"> · AI Platform</span></div>
+  <div class="nav-links">
+    <a href="#map-section">Live Map</a>
+    <a href="#ai-call-section">AI Demo</a>
+    <a href="#analytics">Analytics</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <div class="nav-btns">
+    <button class="btn-outline" style="padding:10px 17px;min-height:40px;font-size:.8rem" onclick="triggerCallDemo()">▶ AI Demo</button>
+    <button class="btn-gold" style="padding:10px 17px;min-height:40px;font-size:.8rem" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Book Demo</button>
+  </div>
+  <button id="hamburger" onclick="document.getElementById('mobile-nav').classList.add('open')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9A96A" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+<div id="mobile-nav">
+  <button onclick="document.getElementById('mobile-nav').classList.remove('open')" style="position:absolute;top:18px;right:18px;background:none;border:none"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C9A96A" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <a href="#map-section" onclick="document.getElementById('mobile-nav').classList.remove('open')">Live Map</a>
+  <a href="#ai-call-section" onclick="document.getElementById('mobile-nav').classList.remove('open')">AI Demo</a>
+  <a href="#analytics" onclick="document.getElementById('mobile-nav').classList.remove('open')">Analytics</a>
+  <a href="#pricing" onclick="document.getElementById('mobile-nav').classList.remove('open')">Pricing</a>
+  <button class="btn-gold" style="width:240px;justify-content:center" onclick="document.getElementById('mobile-nav').classList.remove('open');document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Book Demo</button>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg"></div><div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-badge reveal"><div class="live-dot"></div>LIVE AI SYSTEM — DUBAI</div>
+    <h1 class="hero-h1 reveal d1">AI Lead Closing System<br><span class="gold-text">for Dubai Real Estate</span></h1>
+    <p class="hero-sub reveal d2">Turn every property inquiry into a booked viewing automatically — AI voice calls, WhatsApp, CRM, all in one platform.</p>
+    <div class="hero-btns reveal d3">
+      <button class="btn-gold" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Book Demo <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+      <button class="btn-outline" onclick="document.getElementById('ai-call-section').scrollIntoView({behavior:'smooth'})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start AI Demo</button>
+    </div>
+    <div class="hero-stats reveal d4">
+      <div><div class="stat-val gold-text">184</div><div class="stat-label">Leads/Month</div></div>
+      <div><div class="stat-val gold-text">&lt;3s</div><div class="stat-label">AI Response</div></div>
+      <div><div class="stat-val gold-text">24/7</div><div class="stat-label">Always On</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE MAP -->
+<section id="map-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:38px">
+      <div class="section-tag reveal" style="justify-content:center">Live Intelligence</div>
+      <h2 class="reveal d1" style="font-size:clamp(1.75rem,3.8vw,2.9rem);font-weight:700;margin-bottom:13px">Live Property Inquiries<br><span class="gold-text">Across Dubai</span></h2>
+      <p class="reveal d2" style="color:var(--muted);max-width:460px;margin:0 auto;font-size:.9rem">New buyer inquiries appear in real-time from all major portals — AI responds to every one instantly.</p>
+    </div>
+    <div class="reveal">
+      <div id="map-wrap">
+        <div class="map-badge"><div class="live-dot"></div><div><div class="map-tag">LIVE LEADS TODAY</div><div class="map-num" id="lead-count">0</div></div></div>
+        <div id="map"></div>
+      </div>
+      <div class="map-sources">
+        <div class="src-pill"><div class="src-dot" style="background:#F97316"></div>Bayut</div>
+        <div class="src-pill"><div class="src-dot" style="background:#3B82F6"></div>PropertyFinder</div>
+        <div class="src-pill"><div class="src-dot" style="background:#A855F7"></div>Dubizzle</div>
+        <div style="margin-left:auto;font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:5px;flex-shrink:0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>New leads every 5–8s</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI CALL SECTION -->
+<section id="ai-call-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:42px">
+      <div class="section-tag reveal" style="justify-content:center">AI Voice Demo</div>
+      <h2 class="reveal d1" style="font-size:clamp(1.75rem,3.8vw,2.9rem);font-weight:700;margin-bottom:13px">Hear Your AI Agent<br><span class="gold-text">Close a Live Lead</span></h2>
+      <p class="reveal d2" style="color:var(--muted);max-width:460px;margin:0 auto;font-size:.9rem">This is exactly how the AI sounds on a real call — professional, warm, and always available.</p>
+    </div>
+    <div class="call-layout">
+      <!-- Phone -->
+      <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:14px">
+        <div class="phone-frame">
+          <div class="p-notch-bar"><div class="p-notch"></div></div>
+          <div class="p-call-hdr">
+            <div class="p-avatar">🤖<div class="p-ring"></div><div class="p-ring"></div></div>
+            <div style="font-size:.9rem;font-weight:600">Dubai Luxury RE · AI</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:2px" id="phone-status">Tap ▶ to start</div>
+            <div class="waveform" id="sec-waveform" style="opacity:0;transition:opacity .4s"></div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--gold);margin-top:6px;opacity:0;transition:opacity .4s" id="sec-timer">00:00</div>
+          </div>
+          <div class="p-bubbles" id="sec-bubbles"></div>
+          <div class="typing-dots" id="sec-typing"><span></span><span></span><span></span></div>
+          <div class="p-controls">
+            <button class="ctrl-btn">🔇</button>
+            <button id="play-btn" onclick="startSectionCall()">▶</button>
+            <button class="ctrl-btn" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.18)">📵</button>
+          </div>
+          <div style="height:7px;background:#0C0C14"></div>
+        </div>
+        <button class="btn-gold" style="width:min(280px,100%);justify-content:center" onclick="startSectionCall()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Play AI Call Demo
+        </button>
+      </div>
+      <!-- Transcript -->
+      <div class="reveal d2">
+        <h3 style="font-size:1.15rem;margin-bottom:7px">Full Call Transcript</h3>
+        <p style="color:var(--muted);font-size:.83rem;margin-bottom:18px;line-height:1.6">The AI responds in under 1 second, qualifies the buyer, and books a viewing — fully automatically.</p>
+        <div class="call-transcript">
+          <div class="t-item"><div class="t-role">👤 CUSTOMER</div><div class="t-text">"Hello, I'm looking for a 2 bedroom apartment in Dubai Marina."</div></div>
+          <div class="t-item ai-t"><div class="t-role">🤖 AI ASSISTANT</div><div class="t-text">"Hello Ahmed! Thank you for calling Dubai Luxury Real Estate. Great choice — may I ask your approximate budget?"</div></div>
+          <div class="t-item"><div class="t-role">👤 CUSTOMER</div><div class="t-text">"My budget is around 1.8 million dirhams."</div></div>
+          <div class="t-item ai-t"><div class="t-role">🤖 AI ASSISTANT</div><div class="t-text">"Perfect. We have several excellent options. Would you like to schedule a viewing?"</div></div>
+          <div class="t-item"><div class="t-role">👤 CUSTOMER</div><div class="t-text">"Yes, Thursday works for me."</div></div>
+          <div class="t-item ai-t"><div class="t-role">🤖 AI ASSISTANT</div><div class="t-text">"Excellent! Your viewing is confirmed for Thursday at 4 PM. Confirmation sent!"</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <div class="section-tag reveal" style="justify-content:center">Sales Pipeline</div>
+      <h2 class="reveal d1" style="font-size:clamp(1.75rem,3.8vw,2.9rem);font-weight:700;margin-bottom:12px">AI Moves Leads Through<br><span class="gold-text">Your Pipeline Automatically</span></h2>
+    </div>
+    <div class="pipeline-board reveal" id="pipeline-board"></div>
+    <div style="text-align:center;margin-top:18px">
+      <button class="btn-outline" onclick="animatePipeline()" style="font-size:.8rem">▶ Watch Lead Move Through Pipeline</button>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYTICS -->
+<section id="analytics">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:40px">
+      <div class="section-tag reveal" style="justify-content:center">Analytics</div>
+      <h2 class="reveal d1" style="font-size:clamp(1.75rem,3.8vw,2.9rem);font-weight:700;margin-bottom:12px">Real-Time <span class="gold-text">Performance Dashboard</span></h2>
+    </div>
+    <div class="metrics-grid">
+      <div class="glass metric-card reveal d1"><div class="metric-tag">LEADS THIS MONTH</div><div class="metric-val gold-text">184</div><div class="metric-chg">▲ 23% vs last month</div></div>
+      <div class="glass metric-card reveal d2"><div class="metric-tag">AI CALLS HANDLED</div><div class="metric-val gold-text">160</div><div class="metric-chg">▲ 100% response rate</div></div>
+      <div class="glass metric-card reveal d3"><div class="metric-tag">VIEWINGS BOOKED</div><div class="metric-val gold-text">42</div><div class="metric-chg">▲ 26% conversion</div></div>
+      <div class="glass metric-card reveal d4"><div class="metric-tag">DEALS CLOSED</div><div class="metric-val gold-text">11</div><div class="metric-chg">▲ 6% closing rate</div></div>
+    </div>
+    <div class="charts-grid reveal d1">
+      <div class="glass" style="padding:20px"><div style="font-size:.8rem;font-weight:500;margin-bottom:16px;color:rgba(255,255,255,.6)">Lead Volume — Last 30 Days</div><canvas id="leadChart" height="150"></canvas></div>
+      <div class="glass" style="padding:20px"><div style="font-size:.8rem;font-weight:500;margin-bottom:16px;color:rgba(255,255,255,.6)">Conversion Funnel</div><canvas id="funnelChart" height="150"></canvas></div>
+      <div class="glass" style="padding:20px"><div style="font-size:.8rem;font-weight:500;margin-bottom:16px;color:rgba(255,255,255,.6)">AI Call Handling</div><canvas id="callChart" height="150"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHATSAPP -->
+<section id="wa-section">
+  <div class="container">
+    <div class="wa-layout">
+      <div class="reveal">
+        <div class="section-tag">WhatsApp Automation</div>
+        <h2 style="font-size:clamp(1.75rem,3.5vw,2.5rem);font-weight:700;margin-bottom:13px">Instant Replies on <span style="color:var(--wa)">WhatsApp</span></h2>
+        <p style="color:var(--muted);line-height:1.7;font-size:.88rem;margin-bottom:22px">AI responds to every inquiry in under 3 seconds, qualifies the buyer, and books the viewing — all inside the chat.</p>
+        <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:24px">
+          <div style="display:flex;gap:11px;align-items:flex-start"><div style="width:33px;height:33px;border-radius:8px;background:rgba(37,211,102,.09);border:1px solid rgba(37,211,102,.18);display:flex;align-items:center;justify-content:center;font-size:.88rem;flex-shrink:0">⚡</div><div><div style="font-size:.86rem;font-weight:500;margin-bottom:2px">Replies in under 3 seconds</div><div style="font-size:.76rem;color:var(--muted)">Even at 2am, every lead gets an instant personalised reply.</div></div></div>
+          <div style="display:flex;gap:11px;align-items:flex-start"><div style="width:33px;height:33px;border-radius:8px;background:rgba(37,211,102,.09);border:1px solid rgba(37,211,102,.18);display:flex;align-items:center;justify-content:center;font-size:.88rem;flex-shrink:0">📅</div><div><div style="font-size:.86rem;font-weight:500;margin-bottom:2px">Books viewings in chat</div><div style="font-size:.76rem;color:var(--muted)">Confirms appointments and sends calendar invites inside WhatsApp.</div></div></div>
+        </div>
+        <button class="btn-outline" onclick="playWADemo()" style="font-size:.8rem">▶ Play WhatsApp Demo</button>
+      </div>
+      <div class="reveal d2" style="display:flex;justify-content:center">
+        <div class="wa-frame">
+          <div class="wa-hdr"><div class="wa-av">🏡</div><div><div style="font-weight:600;font-size:.86rem">Dubai Luxury RE · AI</div><div style="font-size:.66rem;color:var(--wa);display:flex;align-items:center;gap:5px"><div class="live-dot" style="width:5px;height:5px"></div>Online</div></div></div>
+          <div class="wa-body" id="wa-body"><div style="text-align:center;padding:20px;font-size:.68rem;color:rgba(255,255,255,.18);font-family:'JetBrains Mono',monospace">TAP PLAY TO SEE DEMO</div></div>
+          <div class="wa-input">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+            <input type="text" placeholder="Message..." readonly>
+            <div style="width:29px;height:29px;border-radius:50%;background:var(--wa);display:flex;align-items:center;justify-content:center;font-size:.76rem;cursor:pointer;flex-shrink:0" onclick="playWADemo()">▶</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:46px">
+      <div class="section-tag reveal" style="justify-content:center">Pricing</div>
+      <h2 class="reveal d1" style="font-size:clamp(1.75rem,3.8vw,2.9rem);font-weight:700;margin-bottom:12px">Choose Your <span class="gold-text">AI Power Level</span></h2>
+      <p class="reveal d2" style="color:var(--muted);max-width:400px;margin:0 auto;font-size:.88rem">All plans include setup, onboarding & dedicated support.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="pr-card reveal d1">
+        <div class="pr-tier" style="color:var(--muted)">STARTER</div>
+        <div class="pr-price">AED 3,000<span>/mo</span></div>
+        <div class="pr-div"></div>
+        <ul class="pr-ul"><li>AI WhatsApp replies</li><li>150 AI voice calls/month</li><li>Basic CRM integration</li><li>Up to 500 CRM contacts</li></ul>
+        <button class="btn-outline" style="width:100%;justify-content:center" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Get Started</button>
+      </div>
+      <div class="pr-card feat reveal d2">
+        <div class="feat-badge">MOST POPULAR</div>
+        <div class="pr-tier" style="color:var(--gold)">GROWTH</div>
+        <div class="pr-price gold-text">AED 6,000<span style="-webkit-text-fill-color:var(--muted)">/mo</span></div>
+        <div class="pr-div" style="background:rgba(201,169,106,.16)"></div>
+        <ul class="pr-ul"><li>600 AI voice calls/month</li><li>Smart follow-ups</li><li>Viewing scheduling automation</li><li>Advanced CRM integration</li><li>Up to 3,000 CRM contacts</li></ul>
+        <button class="btn-gold" style="width:100%;justify-content:center" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Get Started <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="pr-card reveal d3">
+        <div class="pr-tier" style="color:var(--muted)">ELITE</div>
+        <div class="pr-price">AED 12,000<span>/mo</span></div>
+        <div class="pr-div"></div>
+        <ul class="pr-ul"><li>Unlimited AI voice calls</li><li>Unlimited WhatsApp conversations</li><li>Unlimited CRM contacts</li><li>Advanced analytics dashboard</li><li>Custom AI voice training</li></ul>
+        <button class="btn-outline" style="width:100%;justify-content:center" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})">Contact Sales</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:46px">
+      <div class="section-tag reveal" style="justify-content:center">FAQ</div>
+      <h2 class="reveal d1" style="font-size:clamp(1.75rem,3.8vw,2.9rem);font-weight:700;margin-bottom:13px">
+        Everything You Need <span class="gold-text">to Know</span>
+      </h2>
+      <p class="reveal d2" style="color:var(--muted);max-width:460px;margin:0 auto;font-size:.9rem">
+        Common questions from Dubai real estate agencies before going live with AI.
+      </p>
+    </div>
+    <div class="faq-grid reveal">
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">How quickly can the AI be set up for my agency?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">Setup typically takes 48 hours from the time we receive your agency details. This includes AI voice configuration, WhatsApp Business API connection, CRM integration, and a live test call with your team. We handle everything — no technical knowledge required on your end.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">Does the AI sound natural? Will buyers know it's an AI?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">The AI uses a professional, warm female voice that sounds natural and conversational. Most callers do not realise they are speaking with an AI. The AI introduces itself as your property assistant, which is fully compliant and builds trust with buyers who appreciate instant, 24/7 responses.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">Which CRMs and portals does it integrate with?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">We integrate directly with Bayut, PropertyFinder, and Dubizzle lead feeds. For CRM, we support Salesforce, HubSpot, Zoho, Pipedrive, and most Dubai-based agency systems via API or Zapier. Custom integrations are available on the Growth and Elite plans.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">What happens when the AI cannot answer a question?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">The AI is trained to handle property inquiries, qualification, and scheduling. If a buyer asks something outside its scope — such as highly specific legal or mortgage questions — it politely informs the buyer and offers to have a human agent follow up. The lead and query are automatically flagged in your CRM for agent review.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">Can the AI handle calls in Arabic or other languages?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">Yes. The AI supports Arabic, English, Russian, French, and Mandarin — the five most common buyer languages in Dubai. Language detection is automatic. You can also set a preferred primary language per listing or number. Multi-language support is available on Growth and Elite plans.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">Is there a contract or can I cancel anytime?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">All plans are month-to-month with no long-term contract. You can upgrade, downgrade, or cancel at any time with 30 days' notice. The one-time setup fee is non-refundable as it covers the configuration and onboarding work completed before go-live.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">How does WhatsApp automation work alongside voice calls?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">The moment a lead comes in, the AI sends a personalised WhatsApp message AND places a voice call simultaneously — within 3 seconds. Whichever channel the buyer responds on first, the AI continues the conversation there. All interactions sync to your CRM in real time so your agents always have full context.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFAQ(this)">
+          <span class="faq-q-text">Can I customise what the AI says about my listings?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">Absolutely. During onboarding you provide your property portfolio, key selling points, pricing, and any specific scripts or tone-of-voice guidelines. The AI is trained on your exact listings. On the Elite plan you can also record a custom AI voice using your brand persona for full consistency across all calls.</div></div>
+      </div>
+
+    </div>
+
+    <!-- Still have questions -->
+    <div class="reveal" style="text-align:center;margin-top:40px">
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px">Still have questions? We're happy to walk you through everything on a call.</p>
+      <button class="btn-outline" onclick="document.getElementById('cta').scrollIntoView({behavior:'smooth'})" style="font-size:.85rem">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.22 2.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.16 6.16l1.28-1.28a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        Talk to Our Team
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="container" style="text-align:center;position:relative;z-index:2">
+    <div class="section-tag reveal" style="justify-content:center">Get Started</div>
+    <h2 class="reveal d1" style="font-size:clamp(2rem,5vw,3.8rem);font-weight:900;margin-bottom:16px;line-height:1.08">Never Miss Another<br><span class="gold-text">Property Lead</span></h2>
+    <p class="reveal d2" style="color:var(--muted);max-width:480px;margin:0 auto 36px;font-size:.96rem;line-height:1.7">Let AI respond instantly, qualify buyers, and book property viewings automatically.</p>
+    <div class="reveal d3 cta-form">
+      <form id="web3form-contact" method="POST" action="https://api.web3forms.com/submit">
+        <input type="hidden" name="access_key" value="2d262381-04c5-4a95-abe8-32b8dff798c0">
+        <input class="fi" type="text" name="agency_name" placeholder="Agency Name" required>
+        <input class="fi" type="tel" name="whatsapp_number" placeholder="WhatsApp Number (+971...)" required>
+        <input class="fi" type="email" name="email" placeholder="Email Address" required>
+        <button class="btn-gold" style="width:100%;justify-content:center;min-height:50px;font-size:.92rem;margin-bottom:10px" type="submit">Book My Free Demo <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+        <button class="btn-outline" style="width:100%;justify-content:center" type="button" onclick="triggerCallDemo()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start AI Demo First</button>
+        <p style="font-size:.68rem;color:rgba(255,255,255,.2);margin-top:11px">No credit card · Setup in 48 hours · Cancel anytime</p>
+      </form>
+    </div>
+    <div class="trust-row reveal d4">
+      <div class="ti"><span style="color:var(--gold)">🔒</span>No credit card required</div>
+      <div class="ti"><span style="color:var(--gold)">⚡</span>Live in 48 hours</div>
+      <div class="ti"><span style="color:var(--gold)">🇦🇪</span>Built for Dubai agencies</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div style="font-family:'Playfair Display',serif;font-size:.92rem;margin-bottom:7px" class="gold-text">Dubai Luxury Real Estate AI</div>
+  <p style="color:rgba(255,255,255,.18);font-size:.7rem">AI Lead Closing System · Dubai, UAE · © 2025</p>
+</footer>
+
+<!-- INCOMING CALL POPUP -->
+<div id="call-popup">
+  <div style="background:linear-gradient(180deg,#1A1A20,#111116);padding:19px;text-align:center">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.16em;color:var(--gold);margin-bottom:13px">INCOMING CALL · PROPERTY INQUIRY</div>
+    <div class="call-ring">📞</div>
+    <div style="margin-top:13px;font-weight:600;font-size:.95rem" id="popup-caller">Ahmed Hassan</div>
+    <div style="font-size:.73rem;color:var(--muted);margin-top:3px" id="popup-prop">2 Bedroom · Dubai Marina</div>
+    <div style="font-size:.66rem;color:rgba(255,255,255,.2);margin-top:2px" id="popup-src">Source: PropertyFinder</div>
+    <div style="font-size:.64rem;color:rgba(201,169,106,.45);margin-top:5px" id="popup-cd"></div>
+  </div>
+  <div class="call-btns">
+    <button class="cbtn cbtn-d" onclick="declineCall()">Decline</button>
+    <button class="cbtn cbtn-a" onclick="answerCall()">Answer ✓</button>
+  </div>
+</div>
+
+<!-- AI MODAL -->
+<div id="ai-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-av">🤖</div>
+      <div style="font-weight:600;font-size:.92rem">Dubai Luxury RE · AI Assistant</div>
+      <div style="font-size:.7rem;color:var(--green);margin-top:3px;display:flex;align-items:center;gap:5px;justify-content:center"><div class="live-dot" style="width:5px;height:5px"></div><span id="modal-status">Connecting...</span></div>
+      <div class="waveform" id="modal-wv" style="margin-top:10px;opacity:0;transition:opacity .4s"></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.76rem;color:var(--gold);margin-top:6px" id="modal-timer">00:00</div>
+    </div>
+    <div class="modal-transcript" id="modal-transcript"></div>
+    <div class="modal-ctrl">
+      <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:.86rem">🔇</div>
+      <button onclick="endModalCall()" style="background:rgba(239,68,68,.85);border:none;color:#fff;padding:10px 24px;border-radius:50px;font-size:.83rem;font-weight:600;box-shadow:0 6px 16px rgba(239,68,68,.28)">End Call</button>
+      <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:.86rem">📢</div>
+    </div>
+  </div>
+</div>
+
+<!-- CRM -->
+<div id="crm-overlay" onclick="closeCRM()"></div>
+<div id="crm-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--gold);letter-spacing:.12em;margin-bottom:3px">CRM SYSTEM</div><h3 style="font-size:1rem">Lead Auto-Updated</h3></div>
+    <button onclick="closeCRM()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:6px 10px;color:var(--muted);font-size:.8rem">✕</button>
+  </div>
+  <div id="crm-notif" style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:.78rem;color:var(--green);display:none;align-items:center;gap:6px"><span>✓</span> AI updated CRM automatically</div>
+  <div class="crm-f"><div class="crm-lbl">LEAD NAME</div><div class="crm-v" id="crm-name"></div></div>
+  <div class="crm-f"><div class="crm-lbl">BUDGET</div><div class="crm-v" id="crm-budget"></div></div>
+  <div class="crm-f"><div class="crm-lbl">LOCATION</div><div class="crm-v" id="crm-location"></div></div>
+  <div class="crm-f"><div class="crm-lbl">PROPERTY TYPE</div><div class="crm-v" id="crm-type"></div></div>
+  <div class="crm-f"><div class="crm-lbl">VIEWING DATE</div><div class="crm-v" id="crm-date"></div></div>
+  <div class="crm-f"><div class="crm-lbl">LEAD SOURCE</div><div class="crm-v" id="crm-source"></div></div>
+  <div class="crm-f"><div class="crm-lbl">STATUS</div><div class="crm-v" id="crm-status"></div></div>
+  <button class="btn-gold" style="width:100%;justify-content:center;font-size:.83rem;margin-top:14px" onclick="closeCRM()">View Full CRM Dashboard</button>
+</div>
+
+<!-- Leaflet JS loaded LAST to avoid "L is not defined" -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── REVEAL ──
+const revObs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('in') }), {threshold:.1});
+document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+
+// ── CHARTS ──
+const cO = { plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(255,255,255,.28)',font:{size:9}}}, y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(255,255,255,.28)',font:{size:9}}} } };
+new Chart(document.getElementById('leadChart'), { type:'line', data:{ labels:['1','5','10','15','20','25','30'], datasets:[{data:[4,8,12,9,16,14,20],borderColor:'#C9A96A',backgroundColor:'rgba(201,169,106,.07)',fill:true,tension:.4,borderWidth:2,pointRadius:3,pointBackgroundColor:'#C9A96A'}] }, options:{...cO,responsive:true} });
+new Chart(document.getElementById('funnelChart'), { type:'bar', data:{ labels:['Leads','Qualified','Viewings','Neg.','Closed'], datasets:[{data:[184,120,42,18,11],backgroundColor:['rgba(201,169,106,.65)','rgba(201,169,106,.5)','rgba(201,169,106,.4)','rgba(201,169,106,.28)','rgba(201,169,106,.85)'],borderRadius:5,borderSkipped:false}] }, options:{...cO,responsive:true} });
+new Chart(document.getElementById('callChart'), { type:'doughnut', data:{ labels:['AI Handled','Transferred','Missed'], datasets:[{data:[160,18,6],backgroundColor:['#C9A96A','rgba(201,169,106,.3)','rgba(255,255,255,.07)'],borderWidth:0}] }, options:{ plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.38)',font:{size:9},padding:9}}}, cutout:'65%', responsive:true } });
+
+// ── MAP ── (Leaflet loaded above, runs after DOMContentLoaded)
+function initMap() {
+  const map = L.map('map',{center:[25.12,55.2],zoom:11,zoomControl:false,attributionControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  const locs=[{name:'Dubai Marina',lat:25.0772,lng:55.1392},{name:'Downtown Dubai',lat:25.1972,lng:55.2744},{name:'Palm Jumeirah',lat:25.1124,lng:55.139},{name:'Business Bay',lat:25.1869,lng:55.2624},{name:'JVC',lat:25.0573,lng:55.2167},{name:'DIFC',lat:25.2128,lng:55.2805},{name:'Jumeirah Beach',lat:25.1448,lng:55.1937},{name:'Arabian Ranches',lat:25.0574,lng:55.2695}];
+  const names=['Ahmed Hassan','Mohammed Al-Rashid','Sarah Ibrahim','Fatima Al-Zaabi','Omar Khalil','Layla Nasser','Tariq Al-Mansouri','Rania Khoury'];
+  const props=['2 Bedroom Apartment','3 Bedroom Villa','1 Bedroom Studio','Penthouse','4 Bedroom Villa','2 Bedroom Townhouse'];
+  const buds=['AED 1.2M','AED 1.8M','AED 2.4M','AED 3.1M','AED 950K','AED 4.5M'];
+  const srcs=['PropertyFinder','Bayut','Dubizzle','Referral','Instagram'];
+  const scol={PropertyFinder:'#3B82F6',Bayut:'#F97316',Dubizzle:'#A855F7',Referral:'#22c55e',Instagram:'#EC4899'};
+  let cnt=0; const mkrs=[];
+  function mkIcon(c){return L.divIcon({className:'',html:`<div style="width:13px;height:13px;border-radius:50%;background:${c};box-shadow:0 0 12px ${c};position:relative"><div style="position:absolute;inset:-3px;border-radius:50%;border:2px solid ${c};animation:markerPulse 1.8s infinite;opacity:.6"></div></div>`,iconSize:[13,13],iconAnchor:[6,6]})}
+  function spawn(){
+    const loc=locs[Math.floor(Math.random()*locs.length)];
+    const name=names[Math.floor(Math.random()*names.length)];
+    const prop=props[Math.floor(Math.random()*props.length)];
+    const bud=buds[Math.floor(Math.random()*buds.length)];
+    const src=srcs[Math.floor(Math.random()*srcs.length)];
+    const c=scol[src];const j=()=>(Math.random()-.5)*.025;
+    const m=L.marker([loc.lat+j(),loc.lng+j()],{icon:mkIcon(c)}).addTo(map);
+    m.bindPopup(`<div style="font-family:'DM Sans',sans-serif;min-width:185px;padding:2px"><div style="font-family:'JetBrains Mono',monospace;font-size:.56rem;color:#C9A96A;letter-spacing:.12em;margin-bottom:6px">🔴 NEW BUYER INQUIRY</div><div style="font-weight:600;font-size:.88rem;margin-bottom:7px;color:#E8E4DC">${name}</div><div style="display:flex;flex-direction:column;gap:4px;font-size:.74rem;color:rgba(232,228,220,.58)"><div>🏠 <span style="color:#E8E4DC">${prop}</span></div><div>📍 <span style="color:#E8E4DC">${loc.name}</span></div><div>💰 <span style="color:#C9A96A">${bud}</span></div><div>📱 Source: <span style="color:${c}">${src}</span></div></div><div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.07);font-size:.66rem;color:#22c55e">✓ AI responding in &lt;3s...</div></div>`,{maxWidth:225}).openPopup();
+    mkrs.push(m); cnt++; document.getElementById('lead-count').textContent=cnt;
+    currentLead={name,budget:bud,loc:loc.name,prop,source:src};
+    setTimeout(()=>showCallPopup(currentLead),2200);
+    if(mkrs.length>8) map.removeLayer(mkrs.shift());
+  }
+  function next(){const ms=5000+Math.random()*3000;setTimeout(()=>{spawn();next()},ms)}
+  setTimeout(()=>{spawn();next()},1400);
+}
+// Leaflet is already in the DOM at this point (loaded via script tag above)
+document.addEventListener('DOMContentLoaded', initMap);
+
+// ── STATE ──
+let currentLead=null;
+let declineTimer=null, cdInterval=null;
+let callModalActive=false, secCallActive=false;
+const synth=window.speechSynthesis;
+
+// ── INCOMING CALL POPUP ──
+function showCallPopup(lead){
+  if(callModalActive) return;
+  const el=document.getElementById('call-popup');
+  document.getElementById('popup-caller').textContent=lead.name;
+  document.getElementById('popup-prop').textContent=`${lead.prop} · ${lead.loc}`;
+  document.getElementById('popup-src').textContent=`Source: ${lead.source}`;
+  document.getElementById('popup-cd').textContent='';
+  el.style.display='block';
+  clearTimeout(declineTimer);clearInterval(cdInterval);
+  let s=12;
+  cdInterval=setInterval(()=>{s--;const cd=document.getElementById('popup-cd');if(cd)cd.textContent=s>0?`Auto-dismiss in ${s}s`:'';if(s<=0)clearInterval(cdInterval)},1000);
+  declineTimer=setTimeout(()=>{hideCallPopup();scheduleRecall(lead,30)},12000);
+}
+function hideCallPopup(){document.getElementById('call-popup').style.display='none';clearTimeout(declineTimer);clearInterval(cdInterval)}
+function scheduleRecall(lead,sec){if(!callModalActive)setTimeout(()=>{if(!callModalActive)showCallPopup(lead)},sec*1000)}
+function declineCall(){hideCallPopup();if(currentLead)scheduleRecall(currentLead,30)}
+function answerCall(){hideCallPopup();openModalCall()}
+
+// ── CALL MODAL ──
+let mTimerInt=null,mSecs=0;
+const mScript=[
+  {r:'ai',   t:n=>`Hello ${n}, thank you for calling Dubai Luxury Real Estate. I'm your AI assistant. How can I help you today?`},
+  {r:'user', t:()=>"I'm looking for a 2 bedroom apartment in Dubai Marina."},
+  {r:'ai',   t:()=>"Great choice! May I ask your approximate budget?"},
+  {r:'user', t:()=>"My budget is around 1.8 million dirhams."},
+  {r:'ai',   t:()=>"Perfect. We have several excellent options. Would you like to schedule a viewing?"},
+  {r:'user', t:()=>"Yes, Thursday would be great."},
+  {r:'ai',   t:()=>"Excellent! Your viewing is confirmed for Thursday at 4 PM. I'll send you a WhatsApp confirmation shortly. Thank you!"},
+];
+function triggerCallDemo(){currentLead={name:'Ahmed Hassan',budget:'AED 1.8M',loc:'Dubai Marina',prop:'2 Bedroom Apartment',source:'PropertyFinder'};openModalCall()}
+function openModalCall(){
+  if(callModalActive)return;callModalActive=true;
+  document.getElementById('ai-modal').style.display='flex';
+  document.getElementById('modal-transcript').innerHTML='';
+  document.getElementById('modal-status').textContent='Connected';
+  buildWv('modal-wv');document.getElementById('modal-wv').style.opacity='1';
+  mSecs=0;clearInterval(mTimerInt);
+  mTimerInt=setInterval(()=>{mSecs++;document.getElementById('modal-timer').textContent=fmt(mSecs)},1000);
+  const name=currentLead?.name||'Ahmed';
+  runMScript(mScript,0,name);
+}
+async function runMScript(sc,idx,name){
+  if(!callModalActive||idx>=sc.length){if(idx>=sc.length){document.getElementById('modal-status').textContent='Call Complete ✓';await sleep(1400);endModalCall()}return}
+  const l=sc[idx];await sleep(idx===0?700:1100);if(!callModalActive)return;
+  const text=l.t(name);addMBubble(l.r,text);speak(text,l.r==='ai');
+  await sleep(Math.max(text.length*62,1700));runMScript(sc,idx+1,name);
+}
+function addMBubble(role,text){
+  const el=document.createElement('div');el.className=`m-bubble ${role==='ai'?'b-ai':'b-user'}`;
+  if(role==='user')el.style.marginLeft='auto';
+  const lb=document.createElement('div');lb.style.cssText='font-size:.58rem;font-family:"JetBrains Mono",monospace;letter-spacing:.08em;margin-bottom:3px;opacity:.42';lb.textContent=role==='ai'?'🤖 AI ASSISTANT':'👤 CALLER';
+  const bd=document.createElement('div');bd.textContent=text;
+  el.append(lb,bd);const c=document.getElementById('modal-transcript');c.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));c.scrollTop=c.scrollHeight;
+}
+function endModalCall(){callModalActive=false;clearInterval(mTimerInt);synth?.cancel();document.getElementById('ai-modal').style.display='none';openCRMPanel()}
+
+// ── SECTION CALL DEMO ──
+const sScript=[
+  {r:'ai',   t:()=>"Hello Ahmed, thank you for calling Dubai Luxury Real Estate. I'm your AI assistant. How can I help you today?"},
+  {r:'user', t:()=>"I'm looking for a 2 bedroom apartment in Dubai Marina."},
+  {r:'ai',   t:()=>"Great choice! May I ask your approximate budget?"},
+  {r:'user', t:()=>"My budget is around 1.8 million dirhams."},
+  {r:'ai',   t:()=>"Perfect. We have several excellent options. Would you like to schedule a viewing?"},
+  {r:'user', t:()=>"Yes, Thursday would be great."},
+  {r:'ai',   t:()=>"Excellent! Viewing confirmed for Thursday at 4 PM. Thank you, Ahmed!"},
+];
+let sTimerInt=null,sSecs=0;
+function startSectionCall(){
+  if(secCallActive)return;secCallActive=true;
+  document.getElementById('sec-bubbles').innerHTML='';
+  document.getElementById('sec-typing').classList.remove('show');
+  document.getElementById('phone-status').textContent='AI Call Active';
+  buildWv('sec-waveform');
+  document.getElementById('sec-waveform').style.opacity='1';
+  const timerEl=document.getElementById('sec-timer');timerEl.style.opacity='1';
+  document.getElementById('play-btn').textContent='⏸';
+  sSecs=0;clearInterval(sTimerInt);
+  sTimerInt=setInterval(()=>{sSecs++;document.getElementById('sec-timer').textContent=fmt(sSecs)},1000);
+  runSScript(sScript,0);
+}
+async function runSScript(sc,idx){
+  if(!secCallActive||idx>=sc.length){if(idx>=sc.length){document.getElementById('phone-status').textContent='Viewing Booked ✓';document.getElementById('play-btn').textContent='🔄';document.getElementById('sec-waveform').style.opacity='0';clearInterval(sTimerInt);secCallActive=false}return}
+  const l=sc[idx];
+  if(l.r==='ai'){document.getElementById('sec-typing').classList.add('show');await sleep(860);document.getElementById('sec-typing').classList.remove('show')}else{await sleep(480)}
+  if(!secCallActive)return;
+  const text=l.t();addSBubble(l.r,text);speak(text,l.r==='ai');
+  await sleep(Math.max(text.length*58,1500));runSScript(sc,idx+1);
+}
+function addSBubble(role,text){
+  const el=document.createElement('div');el.className=`p-bubble ${role==='ai'?'b-ai':'b-user'}`;
+  const lb=document.createElement('div');lb.style.cssText='font-size:.56rem;font-family:"JetBrains Mono",monospace;letter-spacing:.08em;margin-bottom:3px;opacity:.4';lb.textContent=role==='ai'?'🤖 AI':'👤';
+  const bd=document.createElement('div');bd.textContent=text;el.append(lb,bd);
+  const c=document.getElementById('sec-bubbles');c.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));c.scrollTop=c.scrollHeight;
+}
+
+// ── SPEECH ──
+function speak(text,isAI){
+  if(!synth)return;synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  const vs=synth.getVoices();
+  if(isAI){const v=vs.find(v=>/Samantha|Victoria|Karen|Moira|Tessa|Fiona/i.test(v.name))||vs.find(v=>v.lang==='en-GB')||vs[0];if(v)u.voice=v;u.pitch=1.12;u.rate=1.0}
+  else{const v=vs.find(v=>/Daniel|Alex|David|James|Tom/i.test(v.name))||vs[1]||vs[0];if(v)u.voice=v;u.pitch=.88;u.rate=.95}
+  synth.speak(u);
+}
+if(synth)synth.onvoiceschanged=()=>{};
+
+// ── WAVEFORM ──
+function buildWv(id){const el=document.getElementById(id);el.innerHTML='';for(let i=0;i<15;i++){const b=document.createElement('div');b.className='wv on';b.style.animationDelay=`${(i*.065)%0.8}s`;el.appendChild(b)}}
+
+// ── CRM ──
+function openCRMPanel(){
+  document.getElementById('crm-panel').classList.add('open');
+  document.getElementById('crm-overlay').classList.add('open');
+  const l=currentLead||{name:'Ahmed Hassan',budget:'AED 1.8M',loc:'Dubai Marina',prop:'2 Bedroom Apartment',source:'PropertyFinder'};
+  const flds=[['crm-name',l.name],['crm-budget',l.budget],['crm-location',l.loc],['crm-type',l.prop],['crm-date','Thursday · 4:00 PM'],['crm-source',l.source],['crm-status','✓ Viewing Scheduled']];
+  flds.forEach(([id])=>{const e=document.getElementById(id);e.textContent='';e.classList.remove('filled')});
+  document.getElementById('crm-notif').style.display='none';
+  flds.forEach(([id,val],i)=>setTimeout(()=>{const e=document.getElementById(id);e.textContent=val;e.classList.add('filled')},i*310+350));
+  setTimeout(()=>{document.getElementById('crm-notif').style.display='flex'},flds.length*310+500);
+  setTimeout(animatePipeline,800);
+}
+function closeCRM(){document.getElementById('crm-panel').classList.remove('open');document.getElementById('crm-overlay').classList.remove('open')}
+
+// ── PIPELINE ──
+const pData=[{title:'New Lead',count:8,color:'#3B82F6',pct:0},{title:'Qualified',count:5,color:'#F97316',pct:25},{title:'Viewing Scheduled',count:3,color:'#C9A96A',pct:50},{title:'Negotiation',count:2,color:'#A855F7',pct:75},{title:'Closed Deal',count:1,color:'#22c55e',pct:100}];
+const bList=['Ahmed H.','Mohammed A.','Sarah I.','Layla N.','Omar K.'];
+function buildPipeline(){
+  const bd=document.getElementById('pipeline-board');bd.innerHTML='';
+  pData.forEach((s,si)=>{
+    const col=document.createElement('div');col.className='pipe-col';
+    col.innerHTML=`<div class="pipe-col-hdr"><div class="pipe-t" style="color:${s.color}">${s.title.toUpperCase()}</div><div class="pipe-c" style="background:${s.color}22;border:1px solid ${s.color}44;color:${s.color}">${s.count}</div></div>`;
+    for(let i=0;i<Math.min(s.count,2);i++){const c=document.createElement('div');c.className='pipe-card';if(si===0&&i===0)c.id='pipe-lead';c.innerHTML=`<div class="pipe-name">${bList[(si+i)%bList.length]}</div><div class="pipe-sub">2BR · Dubai Marina</div><div class="pipe-prog"><div class="pipe-bar" style="width:${s.pct}%;background:${s.color}"></div></div>`;col.appendChild(c)}
+    bd.appendChild(col);
+  });
+}
+buildPipeline();
+function animatePipeline(){const c=document.getElementById('pipe-lead');if(!c)return;c.classList.add('active');setTimeout(()=>c.classList.remove('active'),3000)}
+
+// ── WHATSAPP ──
+const waD=[
+  {t:'r',text:"Hi, I'm interested in a 2 bedroom apartment in Dubai Marina.",time:'10:42 AM'},
+  {t:'s',text:"Hello Ahmed! 👋 Thanks for contacting Dubai Luxury Real Estate.\n\nI found 3 perfect listings in Dubai Marina:\n🏠 2BR Marina View — AED 1.75M\n🏠 2BR JBR Walk — AED 1.85M\n🏠 2BR + Study — AED 2.1M\n\nAll ~6–7% ROI. Shall I book a viewing?",time:'10:42 AM'},
+  {t:'r',text:"Yes, the marina view one please.",time:'10:43 AM'},
+  {t:'s',text:"Great choice! 🌊\n\nAvailable slots:\n📅 Thursday 4:00 PM\n📅 Friday 11:00 AM\n📅 Saturday 2:00 PM\n\nWhich works for you?",time:'10:43 AM'},
+  {t:'r',text:"Thursday at 4 PM.",time:'10:44 AM'},
+  {t:'s',text:"✅ Confirmed!\n📅 Thursday · 4:00 PM\n📍 Marina View, Dubai Marina\n\nCalendar invite sent. See you then! 🏙️",time:'10:44 AM'},
+];
+let waPlaying=false;
+async function playWADemo(){
+  if(waPlaying)return;waPlaying=true;
+  const b=document.getElementById('wa-body');b.innerHTML='';
+  for(let i=0;i<waD.length;i++){
+    const m=waD[i];await sleep(i===0?350:1250);
+    if(m.t==='s'){const td=document.createElement('div');td.style.cssText='display:flex;gap:4px;align-items:center;padding:7px 11px;background:#1A2E1A;border-radius:11px;border-bottom-left-radius:2px;width:fit-content;margin:4px 0';td.innerHTML='<span style="width:5px;height:5px;border-radius:50%;background:#25D366;animation:dotB 1.2s infinite"></span><span style="width:5px;height:5px;border-radius:50%;background:#25D366;animation:dotB 1.2s infinite;animation-delay:.2s"></span><span style="width:5px;height:5px;border-radius:50%;background:#25D366;animation:dotB 1.2s infinite;animation-delay:.4s"></span>';b.appendChild(td);b.scrollTop=b.scrollHeight;await sleep(620);b.removeChild(td)}
+    const bub=document.createElement('div');bub.className=`wa-b ${m.t==='s'?'wa-s':'wa-r'}`;bub.innerHTML=`<div style="white-space:pre-line;color:var(--text)">${m.text}</div><div class="wa-time">${m.time}${m.t==='s'?' ✓✓':''}</div>`;b.appendChild(bub);await sleep(50);bub.classList.add('show');b.scrollTop=b.scrollHeight;
+  }
+  waPlaying=false;
+}
+const waObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){playWADemo();waObs.unobserve(e.target)}})},{threshold:.5});
+waObs.observe(document.getElementById('wa-body'));
+
+// ── FAQ TOGGLE ──
+function toggleFAQ(btn){
+  const item=btn.closest('.faq-item');
+  const isOpen=item.classList.contains('open');
+  // close all
+  document.querySelectorAll('.faq-item.open').forEach(el=>{
+    el.classList.remove('open');
+    el.querySelector('.faq-icon').textContent='+';
+  });
+  // open clicked if it was closed
+  if(!isOpen){
+    item.classList.add('open');
+    item.querySelector('.faq-icon').textContent='+';
+  }
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function fmt(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+document.getElementById('web3form-contact')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('.btn-gold');
+  btn.textContent = '✓ Request Sent — We\'ll Call You Shortly';
+  btn.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
+  btn.disabled = true;
+  fetch(form.action, {
+    method: 'POST',
+    body: new FormData(form)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if(data.success) {
+      btn.textContent = '✓ Request Sent — We\'ll Call You Shortly';
+    } else {
+      btn.textContent = 'Error — Try Again';
+      btn.disabled = false;
+      btn.style.background = '';
+    }
+  })
+  .catch(() => {
+    btn.textContent = 'Error — Try Again';
+    btn.disabled = false;
+    btn.style.background = '';
+  });
+});
+</script>
+</body>
+</html>
